@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id             String         @id @default(cuid())
+  email          String         @unique
+  name           String
+  passwordHash   String
+  role           Role           @default(STUDENT)
+  bio            String?
+  hourlyRate     Float?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  // Tutor relations
+  subjects       TutorSubject[]
+  timeSlots      TimeSlot[]
+  
+  // Booking relations (as student)
+  bookings       Booking[]      @relation("StudentBookings")
+  // Booking relations (as tutor)
+  tutorBookings  Booking[]      @relation("TutorBookings")
+  
+  // Notifications
+  notifications  Notification[]
+}
+
+enum Role {
+  TUTOR
+  STUDENT
+}
+
+model Subject {
+  id          String         @id @default(cuid())
+  name        String         @unique
+  createdAt   DateTime       @default(now())
+
+  tutors      TutorSubject[]
+}
+
+model TutorSubject {
+  id        String   @id @default(cuid())
+  tutorId   String
+  subjectId String
+  tutor     User     @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([tutorId, subjectId])
+}
+
+model TimeSlot {
+  id        String    @id @default(cuid())
+  tutorId   String
+  date      DateTime
+  startTime DateTime
+  endTime   DateTime
+  isBooked  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  tutor     User      @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+  booking   Booking?
+}
+
+model Booking {
+  id        String        @id @default(cuid())
+  studentId String
+  tutorId   String
+  slotId    String        @unique
+  status    BookingStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  student   User          @relation("StudentBookings", fields: [studentId], references: [id], onDelete: Cascade)
+  tutor     User          @relation("TutorBookings", fields: [tutorId], references: [id], onDelete: Cascade)
+  slot      TimeSlot      @relation(fields: [slotId], references: [id], onDelete: Cascade)
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  CANCELLED
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
