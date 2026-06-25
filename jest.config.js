@@ -20,6 +20,15 @@ const customJestConfig = {
     '!src/**/__tests__/**',
     '!src/generated/**',
   ],
+  coverageThreshold: {
+    global: {
+      branches: 70,
+      functions: 75,
+      lines: 80,
+      statements: 80,
+    },
+  },
+  coverageReporters: ['text', 'text-summary', 'lcov', 'html'],
 }
 
 module.exports = createJestConfig(customJestConfig)
