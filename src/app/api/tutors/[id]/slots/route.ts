@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { NextRequest } from "next/server";
+import { requireAuth } from "@/lib/session";
 
 export async function GET(
   _req: NextRequest,
-  ctx: RouteContext<"/api/tutors/[id]/slots">
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await ctx.params;
+    const { id } = await params;
 
     const slots = await prisma.timeSlot.findMany({
       where: { tutorId: id, date: { gte: new Date() } },
@@ -33,10 +34,11 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  ctx: RouteContext<"/api/tutors/[id]/slots">
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await ctx.params;
+    const user = await requireAuth();
+    const { id } = await params;
     const body = await request.json();
     const { date, startTime, endTime } = body;
 

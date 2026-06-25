@@ -1,36 +1,23 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
-
-function getUserFromStorage(): User | null {
-  if (typeof window === "undefined") return null;
-  const userStr = localStorage.getItem("user");
-  if (!userStr) return null;
-  return JSON.parse(userStr);
-}
-
-function subscribe(callback: () => void) {
-  window.addEventListener("storage", callback);
-  return () => window.removeEventListener("storage", callback);
-}
-
 export default function DashboardPage() {
   const router = useRouter();
-  const user = useSyncExternalStore(subscribe, getUserFromStorage, () => null);
+  const { data: session, status } = useSession();
 
-  if (!user) {
+  if (status === "loading") {
+    return <div className="p-8">Loading...</div>;
+  }
+
+  if (!session) {
     router.push("/login");
     return <div className="p-8">Redirecting...</div>;
   }
+
+  const user = session.user as any;
 
   return (
     <div className="max-w-4xl mx-auto p-8">

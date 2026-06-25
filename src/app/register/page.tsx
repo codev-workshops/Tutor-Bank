@@ -13,10 +13,12 @@ export default function RegisterPage() {
     role: "STUDENT",
   });
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setIsLoading(true);
 
     try {
       const res = await fetch("/api/auth/register", {
@@ -34,6 +36,8 @@ export default function RegisterPage() {
       router.push("/login");
     } catch {
       setError("Something went wrong");
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -48,6 +52,7 @@ export default function RegisterPage() {
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           className="w-full p-3 border rounded-lg"
           required
+          disabled={isLoading}
         />
         <input
           type="email"
@@ -56,6 +61,7 @@ export default function RegisterPage() {
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           className="w-full p-3 border rounded-lg"
           required
+          disabled={isLoading}
         />
         <input
           type="password"
@@ -66,11 +72,14 @@ export default function RegisterPage() {
           }
           className="w-full p-3 border rounded-lg"
           required
+          disabled={isLoading}
+          minLength={6}
         />
         <select
           value={formData.role}
           onChange={(e) => setFormData({ ...formData, role: e.target.value })}
           className="w-full p-3 border rounded-lg"
+          disabled={isLoading}
         >
           <option value="STUDENT">Student</option>
           <option value="TUTOR">Tutor</option>
@@ -78,9 +87,10 @@ export default function RegisterPage() {
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <button
           type="submit"
-          className="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          className="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-blue-400 disabled:cursor-not-allowed"
+          disabled={isLoading}
         >
-          Register
+          {isLoading ? "Registering..." : "Register"}
         </button>
       </form>
       <p className="mt-4 text-gray-600">

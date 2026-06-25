@@ -30,7 +30,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // TODO: Implement proper session/JWT token management
     return NextResponse.json({
       id: user.id,
       email: user.email,
@@ -39,6 +38,10 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Login error:", error);
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 
 interface TimeSlot {
   id: string;
@@ -17,16 +18,14 @@ export default function ManageSlotsPage() {
     startTime: "",
     endTime: "",
   });
-  const userIdRef = useRef("");
+  const { data: session } = useSession();
 
   useEffect(() => {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      userIdRef.current = user.id;
+    if (session) {
+      const user = session.user as any;
       fetchSlots(user.id);
     }
-  }, []);
+  }, [session]);
 
   async function fetchSlots(tutorId: string) {
     const res = await fetch(`/api/tutors/${tutorId}/slots`);
@@ -38,14 +37,14 @@ export default function ManageSlotsPage() {
 
   async function handleAddSlot(e: React.FormEvent) {
     e.preventDefault();
-    const userId = userIdRef.current;
-    if (!userId) return;
+    if (!session) return;
 
+    const user = session.user as any;
     const { date, startTime, endTime } = formData;
     const startDateTime = new Date(`${date}T${startTime}`);
     const endDateTime = new Date(`${date}T${endTime}`);
 
-    const res = await fetch(`/api/tutors/${userId}/slots`, {
+    const res = await fetch(`/api/tutors/${user.id}/slots`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -57,7 +56,7 @@ export default function ManageSlotsPage() {
 
     if (res.ok) {
       setFormData({ date: "", startTime: "", endTime: "" });
-      fetchSlots(userId);
+      fetchSlots(user.id);
     }
   }
 

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+const VALID_ROLES = ["STUDENT", "TUTOR"];
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -10,6 +12,14 @@ export async function POST(request: Request) {
     if (!email || !name || !password) {
       return NextResponse.json(
         { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    // Validate role if provided
+    if (role && !VALID_ROLES.includes(role)) {
+      return NextResponse.json(
+        { error: "Invalid role" },
         { status: 400 }
       );
     }
@@ -39,6 +49,10 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error("Registration error:", error);
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

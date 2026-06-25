@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 
 interface Notification {
   id: string;
@@ -17,14 +18,14 @@ async function loadNotifications(userId: string): Promise<Notification[]> {
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { data: session } = useSession();
 
   useEffect(() => {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      const user = JSON.parse(userStr);
+    if (session) {
+      const user = session.user as any;
       loadNotifications(user.id).then(setNotifications);
     }
-  }, []);
+  }, [session]);
 
   async function markAsRead(notificationId: string) {
     const res = await fetch("/api/notifications", {

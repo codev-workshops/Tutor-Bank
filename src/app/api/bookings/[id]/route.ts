@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { NextRequest } from "next/server";
+import { requireAuth } from "@/lib/session";
 
 export async function PATCH(
   request: NextRequest,
-  ctx: RouteContext<"/api/bookings/[id]">
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await ctx.params;
+    const user = await requireAuth();
+    const { id } = await params;
     const body = await request.json();
     const { status } = body;
 

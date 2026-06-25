@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
+import { useSession } from "next-auth/react";
 
 interface TimeSlot {
   id: string;
@@ -27,6 +28,7 @@ export default function TutorDetailPage({
   const { id } = use(params);
   const [tutor, setTutor] = useState<TutorDetail | null>(null);
   const [message, setMessage] = useState("");
+  const { data: session } = useSession();
 
   useEffect(() => {
     async function fetchTutor() {
@@ -40,13 +42,11 @@ export default function TutorDetailPage({
   }, [id]);
 
   async function handleBook(slotId: string) {
-    // TODO: Get actual logged-in user ID from session
-    const userStr = localStorage.getItem("user");
-    if (!userStr) {
+    if (!session) {
       setMessage("Please login to book a slot");
       return;
     }
-    const user = JSON.parse(userStr);
+    const user = session.user as any;
 
     const res = await fetch("/api/bookings", {
       method: "POST",

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 
 interface Booking {
   id: string;
@@ -12,16 +13,14 @@ interface Booking {
 
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const userRef = useRef<{ id: string; role: string } | null>(null);
+  const { data: session } = useSession();
 
   useEffect(() => {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      const u = JSON.parse(userStr);
-      userRef.current = u;
-      fetchBookings(u.id, u.role);
+    if (session) {
+      const user = session.user as any;
+      fetchBookings(user.id, user.role);
     }
-  }, []);
+  }, [session]);
 
   async function fetchBookings(userId: string, role: string) {
     const res = await fetch(
@@ -40,12 +39,13 @@ export default function BookingsPage() {
       body: JSON.stringify({ status }),
     });
 
-    if (res.ok && userRef.current) {
-      fetchBookings(userRef.current.id, userRef.current.role);
+    if (res.ok && session) {
+      const user = session.user as any;
+      fetchBookings(user.id, user.role);
     }
   }
 
-  const user = userRef.current;
+  const user = session?.user as any;
 
   return (
     <div className="max-w-4xl mx-auto p-8">

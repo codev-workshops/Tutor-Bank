@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/session";
 
 export async function GET(request: Request) {
   try {
+    const user = await requireAuth();
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
 
@@ -30,6 +32,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const user = await requireAuth();
     const body = await request.json();
     const { notificationId } = body;
 

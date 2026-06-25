@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -8,30 +9,31 @@ export default function LoginPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setIsLoading(true);
 
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+      const result = await signIn("credentials", {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error || "Login failed");
+      if (result?.error) {
+        setError(result.error);
         return;
       }
 
-      const user = await res.json();
-      // TODO: Store user session properly (e.g., cookies/JWT)
-      localStorage.setItem("user", JSON.stringify(user));
       router.push("/dashboard");
+      router.refresh();
     } catch {
       setError("Something went wrong");
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -46,6 +48,7 @@ export default function LoginPage() {
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           className="w-full p-3 border rounded-lg"
           required
+          disabled={isLoading}
         />
         <input
           type="password"
@@ -56,13 +59,15 @@ export default function LoginPage() {
           }
           className="w-full p-3 border rounded-lg"
           required
+          disabled={isLoading}
         />
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <button
           type="submit"
-          className="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          className="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-blue-400 disabled:cursor-not-allowed"
+          disabled={isLoading}
         >
-          Login
+          {isLoading ? "Signing in..." : "Login"}
         </button>
       </form>
       <p className="mt-4 text-gray-600">
