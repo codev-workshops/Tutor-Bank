@@ -20,6 +20,40 @@ export async function PATCH(
       );
     }
 
+    // Fetch the booking to verify ownership before mutating
+    const existingBooking = await prisma.booking.findUnique({
+      where: { id },
+    });
+
+    if (!existingBooking) {
+      return NextResponse.json(
+        { error: "Booking not found" },
+        { status: 404 }
+      );
+    }
+
+    // Enforce role-based authorization:
+    // - Tutor of the booking can CONFIRM or REJECT
+    // - Student of the booking can CANCEL
+    const userId = (user as { id: string }).id;
+
+    if (
+      (status === "CONFIRMED" || status === "REJECTED") &&
+      userId !== existingBooking.tutorId
+    ) {
+      return NextResponse.json(
+        { error: "Forbidden: only the tutor can confirm or reject a booking" },
+        { status: 403 }
+      );
+    }
+
+    if (status === "CANCELLED" && userId !== existingBooking.studentId) {
+      return NextResponse.json(
+        { error: "Forbidden: only the student can cancel a booking" },
+        { status: 403 }
+      );
+    }
+
     const booking = await prisma.booking.update({
       where: { id },
       data: { status },

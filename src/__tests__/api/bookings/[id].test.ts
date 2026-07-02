@@ -4,9 +4,19 @@
 import { PATCH } from '@/app/api/bookings/[id]/route'
 import { prisma } from '@/lib/prisma'
 
+jest.mock('@/lib/session', () => ({
+  requireAuth: jest.fn(),
+  getCurrentUser: jest.fn(),
+}))
+
+import { requireAuth } from '@/lib/session'
+
+const mockRequireAuth = requireAuth as jest.Mock
+
 describe('PATCH /api/bookings/[id]', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockRequireAuth.mockResolvedValue({ id: 'tutor-1', role: 'TUTOR' })
   })
 
   const createRequest = (body: Record<string, unknown>) =>
@@ -17,12 +27,18 @@ describe('PATCH /api/bookings/[id]', () => {
 
   const mockCtx = { params: Promise.resolve({ id: 'booking-1' }) }
 
-  it('should update booking to CONFIRMED', async () => {
+  const mockBooking = {
+    id: 'booking-1',
+    studentId: 'student-1',
+    tutorId: 'tutor-1',
+    slotId: 'slot-1',
+    status: 'PENDING',
+  }
+
+  it('should update booking to CONFIRMED when tutor is authorized', async () => {
+    ;(prisma.booking.findUnique as jest.Mock).mockResolvedValue(mockBooking)
     ;(prisma.booking.update as jest.Mock).mockResolvedValue({
-      id: 'booking-1',
-      studentId: 'student-1',
-      tutorId: 'tutor-1',
-      slotId: 'slot-1',
+      ...mockBooking,
       status: 'CONFIRMED',
     })
     ;(prisma.notification.create as jest.Mock).mockResolvedValue({})
@@ -37,12 +53,10 @@ describe('PATCH /api/bookings/[id]', () => {
     expect(data.status).toBe('CONFIRMED')
   })
 
-  it('should update booking to REJECTED', async () => {
+  it('should update booking to REJECTED when tutor is authorized', async () => {
+    ;(prisma.booking.findUnique as jest.Mock).mockResolvedValue(mockBooking)
     ;(prisma.booking.update as jest.Mock).mockResolvedValue({
-      id: 'booking-1',
-      studentId: 'student-1',
-      tutorId: 'tutor-1',
-      slotId: 'slot-1',
+      ...mockBooking,
       status: 'REJECTED',
     })
     ;(prisma.timeSlot.update as jest.Mock).mockResolvedValue({})
@@ -58,12 +72,11 @@ describe('PATCH /api/bookings/[id]', () => {
     expect(data.status).toBe('REJECTED')
   })
 
-  it('should update booking to CANCELLED', async () => {
+  it('should update booking to CANCELLED when student is authorized', async () => {
+    mockRequireAuth.mockResolvedValue({ id: 'student-1', role: 'STUDENT' })
+    ;(prisma.booking.findUnique as jest.Mock).mockResolvedValue(mockBooking)
     ;(prisma.booking.update as jest.Mock).mockResolvedValue({
-      id: 'booking-1',
-      studentId: 'student-1',
-      tutorId: 'tutor-1',
-      slotId: 'slot-1',
+      ...mockBooking,
       status: 'CANCELLED',
     })
     ;(prisma.timeSlot.update as jest.Mock).mockResolvedValue({})
@@ -79,12 +92,61 @@ describe('PATCH /api/bookings/[id]', () => {
     expect(data.status).toBe('CANCELLED')
   })
 
+  it('should return 403 when non-tutor tries to CONFIRM', async () => {
+    mockRequireAuth.mockResolvedValue({ id: 'attacker-1', role: 'STUDENT' })
+    ;(prisma.booking.findUnique as jest.Mock).mockResolvedValue(mockBooking)
+
+    const response = await PATCH(
+      createRequest({ status: 'CONFIRMED' }) as any,
+      mockCtx as any
+    )
+
+    expect(response.status).toBe(403)
+    expect(prisma.booking.update).not.toHaveBeenCalled()
+  })
+
+  it('should return 403 when non-tutor tries to REJECT', async () => {
+    mockRequireAuth.mockResolvedValue({ id: 'attacker-1', role: 'STUDENT' })
+    ;(prisma.booking.findUnique as jest.Mock).mockResolvedValue(mockBooking)
+
+    const response = await PATCH(
+      createRequest({ status: 'REJECTED' }) as any,
+      mockCtx as any
+    )
+
+    expect(response.status).toBe(403)
+    expect(prisma.booking.update).not.toHaveBeenCalled()
+  })
+
+  it('should return 403 when non-student tries to CANCEL', async () => {
+    mockRequireAuth.mockResolvedValue({ id: 'attacker-1', role: 'TUTOR' })
+    ;(prisma.booking.findUnique as jest.Mock).mockResolvedValue(mockBooking)
+
+    const response = await PATCH(
+      createRequest({ status: 'CANCELLED' }) as any,
+      mockCtx as any
+    )
+
+    expect(response.status).toBe(403)
+    expect(prisma.booking.update).not.toHaveBeenCalled()
+  })
+
+  it('should return 404 when booking does not exist', async () => {
+    ;(prisma.booking.findUnique as jest.Mock).mockResolvedValue(null)
+
+    const response = await PATCH(
+      createRequest({ status: 'CONFIRMED' }) as any,
+      mockCtx as any
+    )
+
+    expect(response.status).toBe(404)
+    expect(prisma.booking.update).not.toHaveBeenCalled()
+  })
+
   it('should free up slot when booking is REJECTED', async () => {
+    ;(prisma.booking.findUnique as jest.Mock).mockResolvedValue(mockBooking)
     ;(prisma.booking.update as jest.Mock).mockResolvedValue({
-      id: 'booking-1',
-      studentId: 'student-1',
-      tutorId: 'tutor-1',
-      slotId: 'slot-1',
+      ...mockBooking,
       status: 'REJECTED',
     })
     ;(prisma.timeSlot.update as jest.Mock).mockResolvedValue({})
@@ -102,11 +164,10 @@ describe('PATCH /api/bookings/[id]', () => {
   })
 
   it('should free up slot when booking is CANCELLED', async () => {
+    mockRequireAuth.mockResolvedValue({ id: 'student-1', role: 'STUDENT' })
+    ;(prisma.booking.findUnique as jest.Mock).mockResolvedValue(mockBooking)
     ;(prisma.booking.update as jest.Mock).mockResolvedValue({
-      id: 'booking-1',
-      studentId: 'student-1',
-      tutorId: 'tutor-1',
-      slotId: 'slot-1',
+      ...mockBooking,
       status: 'CANCELLED',
     })
     ;(prisma.timeSlot.update as jest.Mock).mockResolvedValue({})
@@ -124,11 +185,9 @@ describe('PATCH /api/bookings/[id]', () => {
   })
 
   it('should keep slot booked when CONFIRMED', async () => {
+    ;(prisma.booking.findUnique as jest.Mock).mockResolvedValue(mockBooking)
     ;(prisma.booking.update as jest.Mock).mockResolvedValue({
-      id: 'booking-1',
-      studentId: 'student-1',
-      tutorId: 'tutor-1',
-      slotId: 'slot-1',
+      ...mockBooking,
       status: 'CONFIRMED',
     })
     ;(prisma.notification.create as jest.Mock).mockResolvedValue({})
@@ -142,11 +201,9 @@ describe('PATCH /api/bookings/[id]', () => {
   })
 
   it('should create notification for student on status change', async () => {
+    ;(prisma.booking.findUnique as jest.Mock).mockResolvedValue(mockBooking)
     ;(prisma.booking.update as jest.Mock).mockResolvedValue({
-      id: 'booking-1',
-      studentId: 'student-1',
-      tutorId: 'tutor-1',
-      slotId: 'slot-1',
+      ...mockBooking,
       status: 'CONFIRMED',
     })
     ;(prisma.notification.create as jest.Mock).mockResolvedValue({})
@@ -183,7 +240,7 @@ describe('PATCH /api/bookings/[id]', () => {
   })
 
   it('should handle database errors gracefully (500)', async () => {
-    ;(prisma.booking.update as jest.Mock).mockRejectedValue(
+    ;(prisma.booking.findUnique as jest.Mock).mockRejectedValue(
       new Error('DB error')
     )
 

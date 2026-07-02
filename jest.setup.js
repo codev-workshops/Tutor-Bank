@@ -4,7 +4,7 @@ import '@testing-library/jest-dom'
 jest.mock('@/lib/prisma', () => ({
   prisma: {
     user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), findMany: jest.fn() },
-    booking: { create: jest.fn(), update: jest.fn(), findMany: jest.fn() },
+    booking: { create: jest.fn(), update: jest.fn(), findMany: jest.fn(), findUnique: jest.fn() },
     timeSlot: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), findMany: jest.fn() },
     subject: { findMany: jest.fn(), upsert: jest.fn() },
     tutorSubject: { deleteMany: jest.fn(), create: jest.fn() },
