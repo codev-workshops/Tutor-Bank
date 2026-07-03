@@ -1,0 +1,24 @@
+{
+  "PreToolUse": [
+    {
+      "matcher": "^exec$",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "bash .devin/scripts/guard-exec.sh"
+        }
+      ]
+    }
+  ],
+  "UserPromptSubmit": [
+    {
+      "matcher": "",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "bash .devin/scripts/inject-context.sh"
+        }
+      ]
+    }
+  ]
+}
