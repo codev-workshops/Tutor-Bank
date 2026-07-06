@@ -1,0 +1,22 @@
+{
+  // Project config for the Tutor Bank UI redesign workflow.
+  // Pre-approves the tooling that ui-actor subagents need so the
+  // actor-critic loop can run without per-call permission prompts,
+  // and Playwright MCP tools used by the critic for screenshots/audits.
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Edit(src/**)",
+      "Write(src/**)",
+      "Exec(npm run lint)",
+      "Exec(npm run build)",
+      "Exec(npm test)",
+      "Exec(npx tsc --noEmit)",
+      "mcp__playwright__*"
+    ],
+    "deny": [
+      "Exec(git push)",
+      "Exec(npx prisma migrate reset)"
+    ]
+  }
+}
