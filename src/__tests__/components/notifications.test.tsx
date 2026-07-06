@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useSession } from 'next-auth/react'
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), back: jest.fn(), refresh: jest.fn() }),
@@ -9,6 +10,8 @@ const mockFetch = jest.fn() as jest.Mock
 global.fetch = mockFetch
 
 import NotificationsPage from '@/app/dashboard/notifications/page'
+
+const mockUseSession = useSession as jest.Mock
 
 const mockNotifications = [
   {
@@ -29,25 +32,27 @@ describe('NotificationsPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockFetch.mockReset()
-    ;(localStorage.getItem as jest.Mock).mockReset()
+    mockUseSession.mockReset()
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
   })
 
   it('should render the page heading', () => {
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(null)
     render(<NotificationsPage />)
     expect(screen.getByText('Notifications')).toBeInTheDocument()
   })
 
   it('should show empty state when no notifications', async () => {
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(null)
     render(<NotificationsPage />)
     expect(screen.getByText('No notifications yet.')).toBeInTheDocument()
   })
 
-  it('should load notifications when user exists in localStorage', async () => {
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(
-      JSON.stringify({ id: 'user1', name: 'Test', email: 'test@test.com', role: 'TUTOR' })
-    )
+  it('should load notifications when user exists', async () => {
+    mockUseSession.mockReturnValue({
+      data: {
+        user: { id: 'user1', name: 'Test', email: 'test@test.com', role: 'TUTOR' },
+      },
+      status: 'authenticated',
+    })
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => mockNotifications,
@@ -62,9 +67,12 @@ describe('NotificationsPage', () => {
   })
 
   it('should show Mark read button for unread notifications', async () => {
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(
-      JSON.stringify({ id: 'user1', name: 'Test', email: 'test@test.com', role: 'TUTOR' })
-    )
+    mockUseSession.mockReturnValue({
+      data: {
+        user: { id: 'user1', name: 'Test', email: 'test@test.com', role: 'TUTOR' },
+      },
+      status: 'authenticated',
+    })
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => mockNotifications,
@@ -79,9 +87,12 @@ describe('NotificationsPage', () => {
 
   it('should mark notification as read when button is clicked', async () => {
     const user = userEvent.setup()
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(
-      JSON.stringify({ id: 'user1', name: 'Test', email: 'test@test.com', role: 'TUTOR' })
-    )
+    mockUseSession.mockReturnValue({
+      data: {
+        user: { id: 'user1', name: 'Test', email: 'test@test.com', role: 'TUTOR' },
+      },
+      status: 'authenticated',
+    })
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => mockNotifications,
@@ -110,9 +121,12 @@ describe('NotificationsPage', () => {
   })
 
   it('should handle empty response from API', async () => {
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(
-      JSON.stringify({ id: 'user1', name: 'Test', email: 'test@test.com', role: 'TUTOR' })
-    )
+    mockUseSession.mockReturnValue({
+      data: {
+        user: { id: 'user1', name: 'Test', email: 'test@test.com', role: 'TUTOR' },
+      },
+      status: 'authenticated',
+    })
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => [],
@@ -126,9 +140,12 @@ describe('NotificationsPage', () => {
   })
 
   it('should handle failed API response', async () => {
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(
-      JSON.stringify({ id: 'user1', name: 'Test', email: 'test@test.com', role: 'TUTOR' })
-    )
+    mockUseSession.mockReturnValue({
+      data: {
+        user: { id: 'user1', name: 'Test', email: 'test@test.com', role: 'TUTOR' },
+      },
+      status: 'authenticated',
+    })
     mockFetch.mockResolvedValueOnce({
       ok: false,
       json: async () => ({ error: 'Server error' }),

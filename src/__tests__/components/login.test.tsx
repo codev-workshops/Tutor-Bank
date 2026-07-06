@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { signIn } from 'next-auth/react'
 import LoginPage from '@/app/login/page'
 
 const mockPush = jest.fn()
@@ -8,19 +9,29 @@ jest.mock('next/navigation', () => ({
 }))
 
 jest.mock('next/link', () => {
-  return function MockLink({ children, href, ...rest }: { children: React.ReactNode; href: string; [key: string]: unknown }) {
-    return <a href={href} {...rest}>{children}</a>
+  return function MockLink({
+    children,
+    href,
+    ...rest
+  }: {
+    children: React.ReactNode
+    href: string
+    [key: string]: unknown
+  }) {
+    return (
+      <a href={href} {...rest}>
+        {children}
+      </a>
+    )
   }
 })
 
-const mockFetch = jest.fn() as jest.Mock
-global.fetch = mockFetch
+const mockSignIn = signIn as jest.Mock
 
 describe('LoginPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockFetch.mockReset()
-    ;(localStorage.setItem as jest.Mock).mockClear()
+    mockSignIn.mockReset()
   })
 
   it('should render the login form with email and password inputs', () => {
@@ -45,13 +56,9 @@ describe('LoginPage', () => {
     expect(passwordInput).toHaveAttribute('type', 'password')
   })
 
-  it('should submit form and call API on submit', async () => {
+  it('should call NextAuth credentials signIn on submit', async () => {
     const user = userEvent.setup()
-    const mockUser = { id: '1', name: 'Test User', email: 'test@test.com', role: 'STUDENT' }
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockUser,
-    })
+    mockSignIn.mockResolvedValueOnce({ ok: true, error: null })
 
     render(<LoginPage />)
 
@@ -60,40 +67,17 @@ describe('LoginPage', () => {
     await user.click(screen.getByRole('button', { name: /login/i }))
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: 'test@test.com', password: 'password123' }),
+      expect(mockSignIn).toHaveBeenCalledWith('credentials', {
+        email: 'test@test.com',
+        password: 'password123',
+        redirect: false,
       })
-    })
-  })
-
-  it('should store user data in localStorage on success', async () => {
-    const user = userEvent.setup()
-    const mockUser = { id: '1', name: 'Test User', email: 'test@test.com', role: 'STUDENT' }
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockUser,
-    })
-
-    render(<LoginPage />)
-
-    await user.type(screen.getByPlaceholderText('Email'), 'test@test.com')
-    await user.type(screen.getByPlaceholderText('Password'), 'password123')
-    await user.click(screen.getByRole('button', { name: /login/i }))
-
-    await waitFor(() => {
-      expect(localStorage.setItem).toHaveBeenCalledWith('user', JSON.stringify(mockUser))
     })
   })
 
   it('should redirect to dashboard on success', async () => {
     const user = userEvent.setup()
-    const mockUser = { id: '1', name: 'Test User', email: 'test@test.com', role: 'STUDENT' }
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockUser,
-    })
+    mockSignIn.mockResolvedValueOnce({ ok: true, error: null })
 
     render(<LoginPage />)
 
@@ -106,11 +90,11 @@ describe('LoginPage', () => {
     })
   })
 
-  it('should display error message on API error', async () => {
+  it('should display error message when signIn returns an error', async () => {
     const user = userEvent.setup()
-    mockFetch.mockResolvedValueOnce({
+    mockSignIn.mockResolvedValueOnce({
       ok: false,
-      json: async () => ({ error: 'Invalid credentials' }),
+      error: 'Invalid credentials',
     })
 
     render(<LoginPage />)
@@ -123,30 +107,11 @@ describe('LoginPage', () => {
       expect(screen.getByText('Invalid credentials')).toBeInTheDocument()
     })
     expect(mockPush).not.toHaveBeenCalled()
-    expect(localStorage.setItem).not.toHaveBeenCalled()
   })
 
-  it('should display fallback error message when API returns no error field', async () => {
+  it('should display generic error on signIn rejection', async () => {
     const user = userEvent.setup()
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      json: async () => ({}),
-    })
-
-    render(<LoginPage />)
-
-    await user.type(screen.getByPlaceholderText('Email'), 'test@test.com')
-    await user.type(screen.getByPlaceholderText('Password'), 'password123')
-    await user.click(screen.getByRole('button', { name: /login/i }))
-
-    await waitFor(() => {
-      expect(screen.getByText('Login failed')).toBeInTheDocument()
-    })
-  })
-
-  it('should display generic error on network failure', async () => {
-    const user = userEvent.setup()
-    mockFetch.mockRejectedValueOnce(new Error('Network error'))
+    mockSignIn.mockRejectedValueOnce(new Error('Network error'))
 
     render(<LoginPage />)
 

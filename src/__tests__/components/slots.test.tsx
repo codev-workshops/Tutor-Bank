@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useSession } from 'next-auth/react'
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), back: jest.fn(), refresh: jest.fn() }),
@@ -9,6 +10,8 @@ const mockFetch = jest.fn() as jest.Mock
 global.fetch = mockFetch
 
 import ManageSlotsPage from '@/app/dashboard/slots/page'
+
+const mockUseSession = useSession as jest.Mock
 
 const mockSlots = [
   {
@@ -31,17 +34,16 @@ describe('ManageSlotsPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockFetch.mockReset()
-    ;(localStorage.getItem as jest.Mock).mockReset()
+    mockUseSession.mockReset()
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
   })
 
   it('should render the page heading', () => {
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(null)
     render(<ManageSlotsPage />)
     expect(screen.getByText('Manage Time Slots')).toBeInTheDocument()
   })
 
   it('should render the add slot form', () => {
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(null)
     render(<ManageSlotsPage />)
     expect(screen.getByText('Add New Slot')).toBeInTheDocument()
     expect(screen.getByText('Date')).toBeInTheDocument()
@@ -51,15 +53,17 @@ describe('ManageSlotsPage', () => {
   })
 
   it('should show empty state when no slots exist', () => {
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(null)
     render(<ManageSlotsPage />)
     expect(screen.getByText('No slots added yet.')).toBeInTheDocument()
   })
 
   it('should fetch and display slots when user exists', async () => {
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(
-      JSON.stringify({ id: 'tutor1', name: 'Tutor', email: 'tutor@test.com', role: 'TUTOR' })
-    )
+    mockUseSession.mockReturnValue({
+      data: {
+        user: { id: 'tutor1', name: 'Tutor', email: 'tutor@test.com', role: 'TUTOR' },
+      },
+      status: 'authenticated',
+    })
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => mockSlots,
@@ -74,9 +78,12 @@ describe('ManageSlotsPage', () => {
   })
 
   it('should call fetch with correct URL for slots', async () => {
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(
-      JSON.stringify({ id: 'tutor1', name: 'Tutor', email: 'tutor@test.com', role: 'TUTOR' })
-    )
+    mockUseSession.mockReturnValue({
+      data: {
+        user: { id: 'tutor1', name: 'Tutor', email: 'tutor@test.com', role: 'TUTOR' },
+      },
+      status: 'authenticated',
+    })
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => [],
@@ -91,9 +98,12 @@ describe('ManageSlotsPage', () => {
 
   it('should submit new slot form', async () => {
     const user = userEvent.setup()
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(
-      JSON.stringify({ id: 'tutor1', name: 'Tutor', email: 'tutor@test.com', role: 'TUTOR' })
-    )
+    mockUseSession.mockReturnValue({
+      data: {
+        user: { id: 'tutor1', name: 'Tutor', email: 'tutor@test.com', role: 'TUTOR' },
+      },
+      status: 'authenticated',
+    })
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => [],
@@ -137,7 +147,7 @@ describe('ManageSlotsPage', () => {
 
   it('should not submit form if no user is logged in', async () => {
     const user = userEvent.setup()
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(null)
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
 
     render(<ManageSlotsPage />)
 
@@ -151,7 +161,6 @@ describe('ManageSlotsPage', () => {
 
     await user.click(screen.getByRole('button', { name: /add slot/i }))
 
-    // fetch should not have been called with POST (only the initial GET may or may not happen)
     const postCalls = mockFetch.mock.calls.filter(
       (call: unknown[]) => call[1] && (call[1] as { method?: string }).method === 'POST'
     )
@@ -159,9 +168,12 @@ describe('ManageSlotsPage', () => {
   })
 
   it('should handle failed fetch for slots', async () => {
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(
-      JSON.stringify({ id: 'tutor1', name: 'Tutor', email: 'tutor@test.com', role: 'TUTOR' })
-    )
+    mockUseSession.mockReturnValue({
+      data: {
+        user: { id: 'tutor1', name: 'Tutor', email: 'tutor@test.com', role: 'TUTOR' },
+      },
+      status: 'authenticated',
+    })
     mockFetch.mockResolvedValueOnce({
       ok: false,
       json: async () => ({ error: 'Server error' }),
