@@ -17,7 +17,7 @@ export default function BookingsPage() {
 
   useEffect(() => {
     if (session) {
-      const user = session.user as any;
+      const user = session.user;
       fetchBookings(user.id, user.role);
     }
   }, [session]);
@@ -40,12 +40,12 @@ export default function BookingsPage() {
     });
 
     if (res.ok && session) {
-      const user = session.user as any;
+      const user = session.user;
       fetchBookings(user.id, user.role);
     }
   }
 
-  const user = session?.user as any;
+  const user = session?.user;
 
   return (
     <div className="max-w-4xl mx-auto p-8">

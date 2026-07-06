@@ -22,7 +22,7 @@ export default function ManageSlotsPage() {
 
   useEffect(() => {
     if (session) {
-      const user = session.user as any;
+      const user = session.user;
       fetchSlots(user.id);
     }
   }, [session]);
@@ -39,7 +39,7 @@ export default function ManageSlotsPage() {
     e.preventDefault();
     if (!session) return;
 
-    const user = session.user as any;
+    const user = session.user;
     const { date, startTime, endTime } = formData;
     const startDateTime = new Date(`${date}T${startTime}`);
     const endDateTime = new Date(`${date}T${endTime}`);

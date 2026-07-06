@@ -22,7 +22,7 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     if (session) {
-      const user = session.user as any;
+      const user = session.user;
       loadNotifications(user.id).then(setNotifications);
     }
   }, [session]);

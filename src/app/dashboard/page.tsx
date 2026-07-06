@@ -17,7 +17,7 @@ export default function DashboardPage() {
     return <div className="p-8">Redirecting...</div>;
   }
 
-  const user = session.user as any;
+  const user = session.user;
 
   return (
     <div className="max-w-4xl mx-auto p-8">
