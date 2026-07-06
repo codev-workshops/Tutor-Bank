@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useSession } from 'next-auth/react'
 import BookingsPage from '@/app/dashboard/bookings/page'
 
 jest.mock('next/navigation', () => ({
@@ -8,6 +9,8 @@ jest.mock('next/navigation', () => ({
 
 const mockFetch = jest.fn() as jest.Mock
 global.fetch = mockFetch
+
+const mockUseSession = useSession as jest.Mock
 
 const mockTutorUser = { id: 'tutor-1', name: 'Tutor One', role: 'TUTOR' }
 const mockStudentUser = { id: 'student-1', name: 'Student One', role: 'STUDENT' }
@@ -43,19 +46,21 @@ describe('BookingsPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockFetch.mockReset()
-    ;(localStorage.getItem as jest.Mock).mockReset()
+    mockUseSession.mockReset()
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
   })
 
   it('should render the bookings page with heading', () => {
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(null)
-
     render(<BookingsPage />)
 
     expect(screen.getByText('Bookings')).toBeInTheDocument()
   })
 
   it('should display bookings list with details for tutor', async () => {
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(JSON.stringify(mockTutorUser))
+    mockUseSession.mockReturnValue({
+      data: { user: mockTutorUser },
+      status: 'authenticated',
+    })
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => mockBookings,
@@ -70,7 +75,10 @@ describe('BookingsPage', () => {
   })
 
   it('should display bookings list with details for student', async () => {
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(JSON.stringify(mockStudentUser))
+    mockUseSession.mockReturnValue({
+      data: { user: mockStudentUser },
+      status: 'authenticated',
+    })
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => mockBookings,
@@ -85,7 +93,10 @@ describe('BookingsPage', () => {
   })
 
   it('should show booking status', async () => {
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(JSON.stringify(mockTutorUser))
+    mockUseSession.mockReturnValue({
+      data: { user: mockTutorUser },
+      status: 'authenticated',
+    })
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => mockBookings,
@@ -100,7 +111,10 @@ describe('BookingsPage', () => {
   })
 
   it('should show Confirm and Reject buttons for tutor on pending bookings', async () => {
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(JSON.stringify(mockTutorUser))
+    mockUseSession.mockReturnValue({
+      data: { user: mockTutorUser },
+      status: 'authenticated',
+    })
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => [mockBookings[0]],
@@ -116,7 +130,10 @@ describe('BookingsPage', () => {
 
   it('should call API to confirm booking when Confirm is clicked', async () => {
     const user = userEvent.setup()
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(JSON.stringify(mockTutorUser))
+    mockUseSession.mockReturnValue({
+      data: { user: mockTutorUser },
+      status: 'authenticated',
+    })
     mockFetch
       .mockResolvedValueOnce({
         ok: true,
@@ -146,7 +163,10 @@ describe('BookingsPage', () => {
 
   it('should call API to reject booking when Reject is clicked', async () => {
     const user = userEvent.setup()
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(JSON.stringify(mockTutorUser))
+    mockUseSession.mockReturnValue({
+      data: { user: mockTutorUser },
+      status: 'authenticated',
+    })
     mockFetch
       .mockResolvedValueOnce({
         ok: true,
@@ -175,7 +195,10 @@ describe('BookingsPage', () => {
   })
 
   it('should show Cancel button for student on pending bookings', async () => {
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(JSON.stringify(mockStudentUser))
+    mockUseSession.mockReturnValue({
+      data: { user: mockStudentUser },
+      status: 'authenticated',
+    })
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => [mockBookings[0]],
@@ -190,7 +213,10 @@ describe('BookingsPage', () => {
 
   it('should call API to cancel booking when Cancel is clicked', async () => {
     const user = userEvent.setup()
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(JSON.stringify(mockStudentUser))
+    mockUseSession.mockReturnValue({
+      data: { user: mockStudentUser },
+      status: 'authenticated',
+    })
     mockFetch
       .mockResolvedValueOnce({
         ok: true,
@@ -219,7 +245,10 @@ describe('BookingsPage', () => {
   })
 
   it('should show empty state when no bookings', async () => {
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(JSON.stringify(mockStudentUser))
+    mockUseSession.mockReturnValue({
+      data: { user: mockStudentUser },
+      status: 'authenticated',
+    })
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => [],
@@ -232,8 +261,8 @@ describe('BookingsPage', () => {
     })
   })
 
-  it('should show empty state when no user in localStorage', () => {
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(null)
+  it('should show empty state when no user is logged in', () => {
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
 
     render(<BookingsPage />)
 
@@ -241,7 +270,10 @@ describe('BookingsPage', () => {
   })
 
   it('should fetch bookings with correct params', async () => {
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(JSON.stringify(mockTutorUser))
+    mockUseSession.mockReturnValue({
+      data: { user: mockTutorUser },
+      status: 'authenticated',
+    })
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => mockBookings,
@@ -257,7 +289,10 @@ describe('BookingsPage', () => {
   })
 
   it('should handle API error gracefully', async () => {
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(JSON.stringify(mockStudentUser))
+    mockUseSession.mockReturnValue({
+      data: { user: mockStudentUser },
+      status: 'authenticated',
+    })
     mockFetch.mockResolvedValueOnce({
       ok: false,
       json: async () => ({ error: 'Server error' }),

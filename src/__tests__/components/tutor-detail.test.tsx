@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useSession } from 'next-auth/react'
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), back: jest.fn(), refresh: jest.fn() }),
@@ -7,6 +8,8 @@ jest.mock('next/navigation', () => ({
 
 const mockFetch = jest.fn() as jest.Mock
 global.fetch = mockFetch
+
+const mockUseSession = useSession as jest.Mock
 
 const mockTutor = {
   id: 'tutor1',
@@ -28,14 +31,12 @@ const mockTutor = {
   ],
 }
 
-// Mock React.use() for params
 jest.mock('react', () => {
   const actual = jest.requireActual('react')
   return {
     ...actual,
     use: (promise: unknown) => {
       if (promise && typeof promise === 'object' && 'then' in (promise as object)) {
-        // For params promise
         return { id: 'tutor1' }
       }
       return promise
@@ -49,11 +50,12 @@ describe('TutorDetailPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockFetch.mockReset()
-    ;(localStorage.getItem as jest.Mock).mockReset()
+    mockUseSession.mockReset()
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
   })
 
   it('should show loading state initially', () => {
-    mockFetch.mockReturnValue(new Promise(() => {})) // never resolves
+    mockFetch.mockReturnValue(new Promise(() => {}))
     render(<TutorDetailPage params={Promise.resolve({ id: 'tutor1' })} />)
     expect(screen.getByText('Loading...')).toBeInTheDocument()
   })
@@ -116,7 +118,7 @@ describe('TutorDetailPage', () => {
 
   it('should show login message if user tries to book without login', async () => {
     const user = userEvent.setup()
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(null)
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => mockTutor,
@@ -137,9 +139,12 @@ describe('TutorDetailPage', () => {
 
   it('should book a slot successfully', async () => {
     const user = userEvent.setup()
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(
-      JSON.stringify({ id: 'student1', name: 'Student', email: 'student@test.com', role: 'STUDENT' })
-    )
+    mockUseSession.mockReturnValue({
+      data: {
+        user: { id: 'student1', name: 'Student', email: 'student@test.com', role: 'STUDENT' },
+      },
+      status: 'authenticated',
+    })
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => mockTutor,
@@ -169,9 +174,12 @@ describe('TutorDetailPage', () => {
 
   it('should show error message when booking fails', async () => {
     const user = userEvent.setup()
-    ;(localStorage.getItem as jest.Mock).mockReturnValue(
-      JSON.stringify({ id: 'student1', name: 'Student', email: 'student@test.com', role: 'STUDENT' })
-    )
+    mockUseSession.mockReturnValue({
+      data: {
+        user: { id: 'student1', name: 'Student', email: 'student@test.com', role: 'STUDENT' },
+      },
+      status: 'authenticated',
+    })
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => mockTutor,
@@ -217,7 +225,6 @@ describe('TutorDetailPage', () => {
 
     render(<TutorDetailPage params={Promise.resolve({ id: 'tutor1' })} />)
 
-    // Should remain in loading state
     expect(screen.getByText('Loading...')).toBeInTheDocument()
   })
 })

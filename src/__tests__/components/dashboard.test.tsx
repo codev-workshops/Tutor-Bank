@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { useSession } from 'next-auth/react'
 
 const mockPush = jest.fn()
 jest.mock('next/navigation', () => ({
@@ -6,57 +7,55 @@ jest.mock('next/navigation', () => ({
 }))
 
 jest.mock('next/link', () => {
-  return function MockLink({ children, href, ...rest }: { children: React.ReactNode; href: string; [key: string]: unknown }) {
-    return <a href={href} {...rest}>{children}</a>
+  return function MockLink({
+    children,
+    href,
+    ...rest
+  }: {
+    children: React.ReactNode
+    href: string
+    [key: string]: unknown
+  }) {
+    return (
+      <a href={href} {...rest}>
+        {children}
+      </a>
+    )
   }
 })
 
-interface User {
-  id: string
-  name: string
-  email: string
-  role: string
-}
-
-let mockSnapshotUser: User | null = null
-
-jest.mock('react', () => {
-  const actual = jest.requireActual('react')
-  return {
-    ...actual,
-    useSyncExternalStore: (_subscribe: unknown, _getSnapshot: unknown, _getServerSnapshot: unknown) => {
-      return mockSnapshotUser
-    },
-  }
-})
+const mockUseSession = useSession as jest.Mock
 
 import DashboardPage from '@/app/dashboard/page'
 
 describe('DashboardPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockSnapshotUser = null
-    ;(localStorage.getItem as jest.Mock).mockReset()
+    mockUseSession.mockReset()
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
   })
 
   it('should render the dashboard with user info', () => {
-    mockSnapshotUser = { id: '1', name: 'John Doe', email: 'john@test.com', role: 'STUDENT' }
+    mockUseSession.mockReturnValue({
+      data: {
+        user: { id: '1', name: 'John Doe', email: 'john@test.com', role: 'STUDENT' },
+      },
+      status: 'authenticated',
+    })
 
     render(<DashboardPage />)
 
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
-  })
-
-  it('should display welcome message with user name', () => {
-    mockSnapshotUser = { id: '1', name: 'John Doe', email: 'john@test.com', role: 'STUDENT' }
-
-    render(<DashboardPage />)
-
-    expect(screen.getByText(/Welcome, John Doe/)).toBeInTheDocument()
+    expect(screen.getByText(/Welcome, John Doe \(STUDENT\)/)).toBeInTheDocument()
   })
 
   it('should show navigation links for Bookings, Find Tutors, and Notifications', () => {
-    mockSnapshotUser = { id: '1', name: 'John Doe', email: 'john@test.com', role: 'STUDENT' }
+    mockUseSession.mockReturnValue({
+      data: {
+        user: { id: '1', name: 'John Doe', email: 'john@test.com', role: 'STUDENT' },
+      },
+      status: 'authenticated',
+    })
 
     render(<DashboardPage />)
 
@@ -66,7 +65,12 @@ describe('DashboardPage', () => {
   })
 
   it('should show Manage Slots link for tutor role', () => {
-    mockSnapshotUser = { id: '1', name: 'John Doe', email: 'john@test.com', role: 'TUTOR' }
+    mockUseSession.mockReturnValue({
+      data: {
+        user: { id: '1', name: 'John Doe', email: 'john@test.com', role: 'TUTOR' },
+      },
+      status: 'authenticated',
+    })
 
     render(<DashboardPage />)
 
@@ -74,15 +78,20 @@ describe('DashboardPage', () => {
   })
 
   it('should not show Manage Slots link for student role', () => {
-    mockSnapshotUser = { id: '1', name: 'John Doe', email: 'john@test.com', role: 'STUDENT' }
+    mockUseSession.mockReturnValue({
+      data: {
+        user: { id: '1', name: 'John Doe', email: 'john@test.com', role: 'STUDENT' },
+      },
+      status: 'authenticated',
+    })
 
     render(<DashboardPage />)
 
     expect(screen.queryByText('Manage Slots')).not.toBeInTheDocument()
   })
 
-  it('should redirect to login if no user in localStorage', () => {
-    mockSnapshotUser = null
+  it('should redirect to login when no session exists', () => {
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
 
     render(<DashboardPage />)
 
@@ -90,16 +99,21 @@ describe('DashboardPage', () => {
     expect(screen.getByText('Redirecting...')).toBeInTheDocument()
   })
 
-  it('should read user data from localStorage and display it', () => {
-    mockSnapshotUser = { id: '1', name: 'Jane Smith', email: 'jane@test.com', role: 'STUDENT' }
+  it('should render loading state when session is loading', () => {
+    mockUseSession.mockReturnValue({ data: null, status: 'loading' })
 
     render(<DashboardPage />)
 
-    expect(screen.getByText(/Welcome, Jane Smith/)).toBeInTheDocument()
+    expect(screen.getByText('Loading...')).toBeInTheDocument()
   })
 
   it('should have correct navigation link hrefs', () => {
-    mockSnapshotUser = { id: '1', name: 'John Doe', email: 'john@test.com', role: 'TUTOR' }
+    mockUseSession.mockReturnValue({
+      data: {
+        user: { id: '1', name: 'John Doe', email: 'john@test.com', role: 'TUTOR' },
+      },
+      status: 'authenticated',
+    })
 
     render(<DashboardPage />)
 
