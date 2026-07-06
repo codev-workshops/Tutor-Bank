@@ -16,7 +16,15 @@
       "hooks": [
         {
           "type": "command",
+          "command": "bash .devin/scripts/sanitise-secrets.sh"
+        },
+        {
+          "type": "command",
           "command": "bash .devin/scripts/inject-context.sh"
+        },
+        {
+          "type": "command",
+          "command": "bash .devin/scripts/append-cwd.sh"
         }
       ]
     }
