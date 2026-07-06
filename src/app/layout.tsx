@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
+import Providers from "./providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,20 +30,22 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <nav className="border-b px-8 py-4 flex justify-between items-center">
-          <Link href="/" className="text-xl font-bold">
-            Tutor Bank
-          </Link>
-          <div className="flex gap-4">
-            <Link href="/tutors" className="hover:text-blue-600 transition">
-              Browse Tutors
+        <Providers>
+          <nav className="border-b px-8 py-4 flex justify-between items-center">
+            <Link href="/" className="text-xl font-bold">
+              Tutor Bank
             </Link>
-            <Link href="/dashboard" className="hover:text-blue-600 transition">
-              Dashboard
-            </Link>
-          </div>
-        </nav>
-        <main className="flex-1">{children}</main>
+            <div className="flex gap-4">
+              <Link href="/tutors" className="hover:text-blue-600 transition">
+                Browse Tutors
+              </Link>
+              <Link href="/dashboard" className="hover:text-blue-600 transition">
+                Dashboard
+              </Link>
+            </div>
+          </nav>
+          <main className="flex-1">{children}</main>
+        </Providers>
       </body>
     </html>
   );

@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     }
 
     // Use transaction to prevent race condition
-    const result = await prisma.$transaction(async (tx: any) => {
+    const result = await prisma.$transaction(async (tx) => {
       const slot = await tx.timeSlot.findUnique({ where: { id: slotId } });
       if (!slot || slot.isBooked) {
         throw new Error("Slot is not available");

@@ -46,7 +46,7 @@ export default function TutorDetailPage({
       setMessage("Please login to book a slot");
       return;
     }
-    const user = session.user as any;
+    const user = session.user;
 
     const res = await fetch("/api/bookings", {
       method: "POST",
