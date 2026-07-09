@@ -46,6 +46,15 @@ export default function DashboardPage() {
           <p className="text-gray-600">View and manage your bookings</p>
         </Link>
         <Link
+          href="/dashboard/calendar"
+          className="p-6 border rounded-lg hover:shadow-md transition"
+        >
+          <h2 className="text-xl font-semibold mb-2">Calendar</h2>
+          <p className="text-gray-600">
+            View your bookings on a calendar and export to .ics
+          </p>
+        </Link>
+        <Link
           href="/dashboard/notifications"
           className="p-6 border rounded-lg hover:shadow-md transition"
         >
