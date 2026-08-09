@@ -50,6 +50,11 @@ batch-delete by tutor; Subject deletion queries the GSI and batch-deletes
 matching associations. These helpers are implemented even though no in-scope
 route invokes deletes.
 
+Generated IDs in AWS mode are cuid-shaped opaque unique strings produced by a
+small local generator. They are not Prisma cuid v2 values, so generated ID
+format is not byte-comparable with Postgres; opacity and uniqueness are
+preserved.
+
 ## Emulated versus native behavior
 
 | Concern | Dynamo adapter behavior | Native Postgres behavior / limitation |
@@ -62,6 +67,8 @@ route invokes deletes.
 | Cross-store relation | Resolve matching subject IDs in Dynamo, filter/order users in Postgres, then enrich | Single SQL query performs relation join and projection |
 | Transactions | Dynamo writes made inside a delegated Prisma transaction are not rolled back | Prisma transaction rolls back Postgres writes |
 | Missing association target | Orphan association is omitted | Inner join does not return a null subject |
+| Generated IDs | Hand-rolled cuid-shaped opaque unique values | Prisma-generated cuid v2 values; format is not byte-comparable |
+| Duplicate tutor association | DynamoDB `ConditionalCheckFailedException` | Prisma `P2002`; both become a route-level 500 |
 
 The Dynamo client is constructed as `new DynamoDBClient({})`; region, endpoint,
 and credentials are supplied by deployment/test environment rather than app

@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 
 const loadModule = typeof require === "function"
   ? require
+  // ESM e2e Jest has no CommonJS `require`; this keeps the selector synchronous.
   : createRequire(`${process.cwd()}/src/lib/prisma.ts`);
 const connectionString = process.env.DATABASE_URL!;
 
@@ -32,8 +33,4 @@ export async function initializeDatabase(): Promise<void> {
     initializeResources: () => Promise<void>;
   };
   await initializeResources();
-}
-
-if (process.env.DB_MODE === "aws") {
-  // The adapter module (and AWS SDK) is loaded only in AWS mode.
 }

@@ -1,3 +1,21 @@
+/**
+ * Hybrid routing sends only Subject and TutorSubject operations to this
+ * DynamoDB adapter; every other model and every Prisma `$` method delegates
+ * to the real Prisma client.
+ *
+ * Emulated/native differences: Subject ordering is JavaScript sorting rather
+ * than PostgreSQL collation; tutor subject order uses a monotonic `seq`
+ * rather than physical relation order; subject contains matching uses
+ * JavaScript `toLowerCase()` rather than PostgreSQL collation-aware ILIKE;
+ * `%` and `_` remain ordinary characters; locale-specific Unicode casing can
+ * differ; cross-store relation filtering resolves IDs in DynamoDB but leaves
+ * tutor selection/order in PostgreSQL; Dynamo writes inside PostgreSQL
+ * transactions are not rolled back; orphan associations are omitted; IDs
+ * are hand-rolled cuid-shaped opaque unique values rather than Prisma cuid v2.
+ * A duplicate tutorSubject create raises DynamoDB's
+ * ConditionalCheckFailedException rather than Prisma P2002; both become a
+ * route-level 500 and are not observable here.
+ */
 /* eslint-disable @typescript-eslint/no-require-imports */
 const {
   BatchWriteCommand,
@@ -20,7 +38,15 @@ function cuid(): string {
 }
 
 function subjectProjection(item: SubjectRecord, select?: SubjectSelect): Record<string, unknown> {
-  if (!select) return { ...item };
+  if (!select) {
+    return {
+      id: item.id,
+      name: item.name,
+      createdAt: item.createdAt instanceof Date
+        ? item.createdAt
+        : new Date(item.createdAt as unknown as string),
+    };
+  }
   const result: Record<string, unknown> = {};
   if (select.id) result.id = item.id;
   if (select.name) result.name = item.name;

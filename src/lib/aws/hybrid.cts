@@ -16,6 +16,14 @@ function withSubjectFilter(where: AnyRecord | undefined, tutorIds: string[]): An
   return { ...(where ?? {}), id: { in: tutorIds } };
 }
 
+function orderedTutor(row: AnyRecord, select: AnyRecord, subjects: unknown): AnyRecord {
+  const result: AnyRecord = {};
+  for (const key of Object.keys(select)) {
+    result[key] = key === "subjects" ? subjects : row[key];
+  }
+  return result;
+}
+
 function createHybridClient(real: PrismaClient): PrismaClient {
   const dynamo = new DynamoAdapter();
   const user = new Proxy((real as any).user, {
@@ -37,19 +45,21 @@ function createHybridClient(real: PrismaClient): PrismaClient {
         select: withoutSubjects(select),
       });
       if (!select?.subjects) return rows;
-      return Promise.all(rows.map(async (row: AnyRecord) => ({
-        ...row,
-        subjects: await dynamo.enrichTutor(row.id, select.subjects.select?.subject?.select),
-      })));
+      return Promise.all(rows.map(async (row: AnyRecord) => orderedTutor(
+        row,
+        select,
+        await dynamo.enrichTutor(row.id, select.subjects.select?.subject?.select),
+      )));
       };
       if (property === "findUnique") return async (args: AnyRecord) => {
       const select = args.select;
       const row = await (real as any).user.findUnique({ ...args, select: withoutSubjects(select) });
       if (!row || !select?.subjects) return row;
-      return {
-        ...row,
-        subjects: await dynamo.enrichTutor(row.id, select.subjects.select?.subject?.select),
-      };
+      return orderedTutor(
+        row,
+        select,
+        await dynamo.enrichTutor(row.id, select.subjects.select?.subject?.select),
+      );
       };
       const value = Reflect.get(target, property, receiver);
       return typeof value === "function" ? value.bind(target) : value;
@@ -59,16 +69,26 @@ function createHybridClient(real: PrismaClient): PrismaClient {
   return new Proxy(real, {
     get(target, property, receiver) {
       if (property === "subject") {
-        return {
+        return new Proxy({
           findMany: (args: AnyRecord) => dynamo.subjectFindMany(args as any),
           upsert: (args: AnyRecord) => dynamo.subjectUpsert(args as any),
-        };
+        }, {
+          get(target, operation, receiver) {
+            if (operation in target) return Reflect.get(target, operation, receiver);
+            throw new Error(`subject.${String(operation)} is not implemented in the DynamoDB adapter (out of slice scope)`);
+          },
+        });
       }
       if (property === "tutorSubject") {
-        return {
+        return new Proxy({
           create: (args: AnyRecord) => dynamo.tutorSubjectCreate(args as any),
           deleteMany: (args: AnyRecord) => dynamo.tutorSubjectDeleteMany(args as any),
-        };
+        }, {
+          get(target, operation, receiver) {
+            if (operation in target) return Reflect.get(target, operation, receiver);
+            throw new Error(`tutorSubject.${String(operation)} is not implemented in the DynamoDB adapter (out of slice scope)`);
+          },
+        });
       }
       if (property === "user") return user;
       const value = Reflect.get(target, property, receiver);
