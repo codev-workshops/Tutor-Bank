@@ -127,7 +127,7 @@ environment and a separate setup file. The setup file mocks only
 default transform cannot load the ESM-only `@auth/prisma-adapter` package
 (`Unexpected token 'export'` while importing `src/lib/auth.ts`), and then
 cannot call the ESM credentials provider through the CommonJS transform.
- A direct attempt with the default transform also reaches Prisma's real
+A direct attempt with the default transform also reaches Prisma's real
 dynamic ESM query compiler and fails on
 `query_compiler_fast_bg.postgresql.mjs` with `Unexpected token 'export'`.
 Therefore the config uses two minimal module-loading harness shims:
