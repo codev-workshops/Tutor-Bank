@@ -16,8 +16,7 @@ wait_for_postgres() {
 
 wait_for_moto() {
   for _ in $(seq 1 60); do
-    if AWS_ACCESS_KEY_ID=dummy AWS_SECRET_ACCESS_KEY=dummy AWS_DEFAULT_REGION=us-east-1 \
-      aws dynamodb list-tables --endpoint-url http://127.0.0.1:5001 >/dev/null 2>&1; then return; fi
+    if curl -fsS http://127.0.0.1:5001/ >/dev/null 2>&1; then return; fi
     sleep 1
   done
   echo "Moto did not become ready" >&2

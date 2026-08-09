@@ -28,22 +28,27 @@ export function createHybridClient(real: any) {
   const timeSlot = createTimeSlotDelegate();
   const booking = createBookingDelegate(real, timeSlot);
 
-  const user = {
-    ...real.user,
-    async findUnique(args: any) {
-      const stripped = withoutTimeSlots(args);
-      if (!stripped) return real.user.findUnique(args);
-      const result = await real.user.findUnique(stripped);
-      if (!result) return null;
-      const relation = args.select?.timeSlots ?? args.include?.timeSlots;
-      const slots = await timeSlot.findMany({
-        where: { ...(relation.where ?? {}), tutorId: result.id },
-        orderBy: relation.orderBy,
-        select: relation.select,
-      });
-      return { ...result, timeSlots: slots };
+  const user = new Proxy(real.user, {
+    get(target, property, receiver) {
+      if (property === "findUnique") {
+        return async (args: any) => {
+          const stripped = withoutTimeSlots(args);
+          if (!stripped) return target.findUnique.call(target, args);
+          const result = await target.findUnique.call(target, stripped);
+          if (!result) return null;
+          const relation = args.select?.timeSlots ?? args.include?.timeSlots;
+          const slots = await timeSlot.findMany({
+            where: { ...(relation.where ?? {}), tutorId: result.id },
+            orderBy: relation.orderBy,
+            select: relation.select,
+          });
+          return { ...result, timeSlots: slots };
+        };
+      }
+      const value = Reflect.get(target, property, receiver);
+      return typeof value === "function" ? value.bind(target) : value;
     },
-  };
+  });
 
   const hybrid: any = new Proxy(real, {
     get(target, property, receiver) {

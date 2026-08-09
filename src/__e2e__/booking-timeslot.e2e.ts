@@ -66,6 +66,10 @@ async function createBookingFor(studentId: string, tutorId: string, slotId: stri
   );
 }
 
+async function waitForDistinctTimestamp() {
+  await new Promise((resolve) => setTimeout(resolve, 5));
+}
+
 const describeE2E = process.env.RUN_E2E === "1" ? describe : describe.skip;
 
 describeE2E("Booking and TimeSlot parity", () => {
@@ -122,6 +126,7 @@ describeE2E("Booking and TimeSlot parity", () => {
     const firstSlot = await futureSlot(tutor.id, 96);
     const secondSlot = await futureSlot(tutor.id, 120);
     const first = await createBookingFor(student.id, tutor.id, firstSlot.id);
+    await waitForDistinctTimestamp();
     const second = await createBookingFor(student.id, tutor.id, secondSlot.id);
     const firstBody = await first.json();
     const secondBody = await second.json();
@@ -136,6 +141,9 @@ describeE2E("Booking and TimeSlot parity", () => {
         tutor: { id: tutor.id, name: "Tutor Name", email: `${tutor.id}@example.com` },
         slot: { id: secondSlot.id, date: secondSlot.date, startTime: secondSlot.startTime, endTime: secondSlot.endTime },
       });
+      expect(Object.keys(body[0].student).sort()).toEqual(["email", "id", "name"]);
+      expect(Object.keys(body[0].tutor).sort()).toEqual(["email", "id", "name"]);
+      expect(Object.keys(body[0].slot).sort()).toEqual(["date", "endTime", "id", "startTime"]);
     }
   });
 
@@ -146,13 +154,18 @@ describeE2E("Booking and TimeSlot parity", () => {
       const slot = await futureSlot(tutor.id, 144 + Math.random());
       const bookingResponse = await createBookingFor(student.id, tutor.id, slot.id);
       const booking = await bookingResponse.json();
+      const createdAt = booking.createdAt;
+      const beforePatchUpdatedAt = booking.updatedAt;
       withSession(tutor.id, "TUTOR");
       const patched = await updateBooking(
         new Request("http://localhost", { method: "PATCH", body: JSON.stringify({ status }) }),
         { params: Promise.resolve({ id: booking.id }) },
       );
       expect(patched.status).toBe(200);
-      expect((await patched.json()).status).toBe(status);
+      const patchedBody = await patched.json();
+      expect(patchedBody.status).toBe(status);
+      expect(new Date(patchedBody.updatedAt).getTime()).toBeGreaterThan(new Date(createdAt).getTime());
+      expect(new Date(patchedBody.updatedAt).getTime()).toBeGreaterThan(new Date(beforePatchUpdatedAt).getTime());
       const slots = await (await getSlots(new Request("http://localhost"), { params: Promise.resolve({ id: tutor.id }) } as any)).json();
       expect(slots.find((item: any) => item.id === slot.id).isBooked).toBe(shouldBeBooked);
     }
@@ -168,9 +181,19 @@ describeE2E("Booking and TimeSlot parity", () => {
     expect(unknown.status).toBe(404);
     expect(await unknown.json()).toEqual({ error: "Tutor not found" });
     const tutor = await createUser("TUTOR");
+    const past = await futureSlot(tutor.id, -24);
     const future = await futureSlot(tutor.id, 240);
+    const slotsResponse = await getSlots(new Request("http://localhost"), { params: Promise.resolve({ id: tutor.id }) } as any);
+    const listedSlots = await slotsResponse.json();
+    expect(listedSlots.find((item: any) => item.id === past.id)).toBeUndefined();
+    expect(listedSlots.find((item: any) => item.id === future.id)).toBeDefined();
     const response = await getTutor(new Request("http://localhost"), { params: Promise.resolve({ id: tutor.id }) } as any);
-    expect((await response.json()).timeSlots).toContainEqual({ id: future.id, date: future.date, startTime: future.startTime, endTime: future.endTime });
+    const tutorBody = await response.json();
+    expect(tutorBody.timeSlots.find((item: any) => item.id === past.id)).toBeUndefined();
+    expect(tutorBody.timeSlots).toContainEqual({ id: future.id, date: future.date, startTime: future.startTime, endTime: future.endTime });
+    const missingUserId = await getBookings(new Request("http://localhost/api/bookings?role=TUTOR"));
+    expect(missingUserId.status).toBe(400);
+    expect(await missingUserId.json()).toEqual({ error: "userId is required" });
     const missingFields = await createBooking(new Request("http://localhost", { method: "POST", body: JSON.stringify({}) }));
     expect(missingFields.status).toBe(400);
     expect(await missingFields.json()).toEqual({ error: "Missing required fields: studentId, tutorId, slotId" });
@@ -178,5 +201,22 @@ describeE2E("Booking and TimeSlot parity", () => {
     const unauthenticated = await createBooking(new Request("http://localhost", { method: "POST", body: JSON.stringify({ studentId: "s", tutorId: "t", slotId: "x" }) }));
     expect(unauthenticated.status).toBe(500);
     expect(await unauthenticated.json()).toEqual({ error: "Internal server error" });
+  });
+
+  it("emulates the unique slot constraint after a cancelled booking", async () => {
+    const tutor = await createUser("TUTOR");
+    const student = await createUser("STUDENT");
+    const slot = await futureSlot(tutor.id, 300);
+    const firstResponse = await createBookingFor(student.id, tutor.id, slot.id);
+    const firstBooking = await firstResponse.json();
+    withSession(tutor.id, "TUTOR");
+    const cancelled = await updateBooking(
+      new Request("http://localhost", { method: "PATCH", body: JSON.stringify({ status: "CANCELLED" }) }),
+      { params: Promise.resolve({ id: firstBooking.id }) },
+    );
+    expect(cancelled.status).toBe(200);
+    const secondResponse = await createBookingFor(student.id, tutor.id, slot.id);
+    expect(secondResponse.status).toBe(500);
+    expect(await secondResponse.json()).toEqual({ error: "Internal server error" });
   });
 });

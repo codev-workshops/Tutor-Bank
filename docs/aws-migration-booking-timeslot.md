@@ -120,3 +120,21 @@ The required authentication parity case is also intentional: with no session,
 the current booking POST returns HTTP 500 with `{"error":"Internal server error"}`
 because `requireAuth()` throws and the route's generic catch handles it. This
 migration does not add a 401/403 path.
+
+The e2e project uses `next/jest`'s default transform with a Node test
+environment and a separate setup file. The setup file mocks only
+`next-auth`'s `getServerSession`; Prisma remains real in both modes. The
+default transform cannot load the ESM-only `@auth/prisma-adapter` package
+(`Unexpected token 'export'` while importing `src/lib/auth.ts`), and then
+cannot call the ESM credentials provider through the CommonJS transform.
+ A direct attempt with the default transform also reaches Prisma's real
+dynamic ESM query compiler and fails on
+`query_compiler_fast_bg.postgresql.mjs` with `Unexpected token 'export'`.
+Therefore the config uses two minimal module-loading harness shims:
+`prisma-adapter-bridge.js` exposes the adapter-shaped export and
+`credentials-provider-bridge.js` exposes the provider-shaped export. They are
+not behavioral test stubs, do not mock Prisma or authentication behavior, and
+exist only to let Jest load the real application modules. The config retains
+the smallest ESM-compatible `ts-jest` transform and
+`NODE_OPTIONS=--experimental-vm-modules` needed to execute the real Prisma
+client.

@@ -46,8 +46,8 @@ export function prismaUnique(model: string, target: string[]): Error & { code: s
   return error as Error & { code: string };
 }
 
-export function strictlyAfter(value: string, previous?: string) {
+export function strictlyAfter(previous: string) {
   const next = Date.now();
-  const prior = previous ? new Date(previous).getTime() : 0;
+  const prior = new Date(previous).getTime();
   return new Date(Math.max(next, prior + 1)).toISOString();
 }
