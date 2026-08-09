@@ -75,6 +75,8 @@ jobs:
 
       - name: Push PostgreSQL schema
         run: npx prisma db push
+        env:
+          DATABASE_URL: postgresql://test:test@127.0.0.1:5432/tutor_bank_test
 
       - name: Run parity suite
         run: npm run test:parity
