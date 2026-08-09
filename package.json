@@ -11,9 +11,16 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --maxWorkers=2"
+    ,"emu-up": "bash scripts/emulator.sh up"
+    ,"emu-down": "bash scripts/emulator.sh down"
+    ,"test:e2e:local": "NODE_OPTIONS=--experimental-vm-modules DATABASE_URL=${DATABASE_URL:-postgresql://test:test@127.0.0.1:5432/tutor_bank_test} RUN_E2E=1 jest --config jest.e2e.config.js --runInBand"
+    ,"test:e2e:aws": "NODE_OPTIONS=--experimental-vm-modules DB_MODE=aws DATABASE_URL=${DATABASE_URL:-postgresql://test:test@127.0.0.1:5432/tutor_bank_test} RUN_E2E=1 AWS_ACCESS_KEY_ID=dummy AWS_SECRET_ACCESS_KEY=dummy AWS_REGION=us-east-1 AWS_ENDPOINT_URL=http://127.0.0.1:5001 DYNAMODB_TABLE_PREFIX=parity_ jest --config jest.e2e.config.js --runInBand"
+    ,"test:parity": "npm test && npm run test:e2e:local && npm run test:e2e:aws"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
+    "@aws-sdk/client-dynamodb": "3.1101.0",
+    "@aws-sdk/lib-dynamodb": "3.1101.0",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "bcryptjs": "^3.0.3",

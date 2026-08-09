@@ -12,6 +12,21 @@ function createPrismaClient() {
   return new PrismaClient({ adapter });
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+const realPrisma = globalForPrisma.prisma ?? createPrismaClient();
+const hybridFactory =
+  process.env.DB_MODE === "aws"
+    ? (await import("./aws/hybrid")).createHybridClient
+    : undefined;
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+export const prisma: PrismaClient =
+  process.env.DB_MODE === "aws"
+    ? (hybridFactory!(realPrisma) as PrismaClient)
+    : realPrisma;
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = realPrisma;
+
+export async function initializeDatabase() {
+  if (process.env.DB_MODE === "aws") {
+    await (await import("./aws/resources")).initializeResources();
+  }
+}
