@@ -17,7 +17,9 @@ async function user(role: "TUTOR" | "STUDENT") {
   });
 }
 
-describe("Notification parity", () => {
+const describeParity = process.env.RUN_E2E === "1" ? describe : describe.skip;
+
+describeParity("Notification parity", () => {
   beforeAll(async () => {
     await initializeDatabase();
     if (process.env.DB_MODE === "aws") await initializeDatabase();

@@ -71,7 +71,7 @@ jobs:
       moto:
         image: motoserver/moto
         ports:
-          - 5001:5001
+          - 5001:5000
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -80,6 +80,8 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npx prisma generate
+      - name: Wait for moto
+        run: for i in $(seq 1 60); do curl -fsS http://127.0.0.1:5001/moto-api/ >/dev/null 2>&1 && exit 0; sleep 1; done; exit 1
       - run: DATABASE_URL=postgresql://test:test@localhost:5432/tutor_bank_test npx prisma db push
       - run: npm run test:parity
         env:
