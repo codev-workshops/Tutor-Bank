@@ -1,0 +1,87 @@
+name: Database parity
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: tutor_bank_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d tutor_bank_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      moto:
+        image: motoserver/moto:5.1.17
+        ports:
+          - 5001:5000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Wait for parity services
+        shell: bash
+        run: |
+          set -euo pipefail
+          postgres_ready=false
+          for _ in $(seq 1 60); do
+            if pg_isready -h 127.0.0.1 -p 5432 -U test -d tutor_bank_test >/dev/null 2>&1; then
+              postgres_ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [[ "$postgres_ready" != true ]]; then
+            echo "PostgreSQL service did not become ready within 60 seconds" >&2
+            exit 1
+          fi
+
+          moto_ready=false
+          for _ in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:5001/moto-api/ >/dev/null 2>&1; then
+              moto_ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [[ "$moto_ready" != true ]]; then
+            echo "Moto service did not become ready within 60 seconds" >&2
+            exit 1
+          fi
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Push PostgreSQL schema
+        run: npx prisma db push
+
+      - name: Run parity suite
+        run: npm run test:parity
+        env:
+          DATABASE_URL: postgresql://test:test@127.0.0.1:5432/tutor_bank_test
+          AWS_REGION: us-east-1
+          AWS_ENDPOINT_URL: http://127.0.0.1:5001
+          DYNAMODB_TABLE_PREFIX: tutor-bank-ci-
+          AWS_ACCESS_KEY_ID: dummy
+          AWS_SECRET_ACCESS_KEY: dummy

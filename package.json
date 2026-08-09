@@ -13,8 +13,8 @@
     "test:ci": "jest --ci --coverage --maxWorkers=2",
     "emu-up": "scripts/emulator.sh up",
     "emu-down": "scripts/emulator.sh down",
-    "test:e2e:local": "scripts/with-generated-client.sh env NODE_OPTIONS=--experimental-vm-modules RUN_E2E=1 DATABASE_URL=postgresql://test:test@127.0.0.1:55432/tutor_bank_test DB_MODE=postgres jest --config jest.e2e.config.js --runInBand",
-    "test:e2e:aws": "scripts/with-generated-client.sh env NODE_OPTIONS=--experimental-vm-modules RUN_E2E=1 DATABASE_URL=postgresql://test:test@127.0.0.1:55432/tutor_bank_test DB_MODE=aws AWS_REGION=us-east-1 AWS_ENDPOINT_URL=http://127.0.0.1:5001 AWS_ACCESS_KEY_ID=dummy AWS_SECRET_ACCESS_KEY=dummy DYNAMODB_TABLE_PREFIX=tutor-bank-test- jest --config jest.e2e.config.js --runInBand",
+    "test:e2e:local": "scripts/with-generated-client.sh env NODE_OPTIONS=--experimental-vm-modules RUN_E2E=1 DATABASE_URL=${DATABASE_URL:-postgresql://test:test@127.0.0.1:55432/tutor_bank_test} DB_MODE=postgres jest --config jest.e2e.config.js --runInBand",
+    "test:e2e:aws": "scripts/with-generated-client.sh env NODE_OPTIONS=--experimental-vm-modules RUN_E2E=1 DATABASE_URL=${DATABASE_URL:-postgresql://test:test@127.0.0.1:55432/tutor_bank_test} DB_MODE=aws AWS_REGION=${AWS_REGION:-us-east-1} AWS_ENDPOINT_URL=${AWS_ENDPOINT_URL:-http://127.0.0.1:5001} AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-dummy} AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-dummy} DYNAMODB_TABLE_PREFIX=${DYNAMODB_TABLE_PREFIX:-tutor-bank-test-} jest --config jest.e2e.config.js --runInBand",
     "test:parity": "npm test && npm run test:e2e:local && npm run test:e2e:aws"
   },
   "dependencies": {
