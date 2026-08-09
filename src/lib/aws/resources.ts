@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { getDynamoClient, loadAwsModule } from "./client";
 
 const ACTIVE = "ACTIVE";

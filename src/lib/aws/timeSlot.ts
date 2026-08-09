@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { getDocumentClient, loadAwsModule } from "./client";
 import { timeSlotTableName } from "./resources";
 import { fromStoredDate, project, scalarDates, toStoredDate, cuidShapedId, unsupported, prismaNotFound } from "./common";
@@ -7,14 +8,10 @@ function command(name: string, input: Record<string, unknown>) {
   return new sdk[name](input);
 }
 
-function matches(args: any, expected: string) {
-  return JSON.stringify(args) === expected;
-}
-
 export function createTimeSlotDelegate() {
   return {
     async findUnique(args: any) {
-      if (!args || !args.where || Object.keys(args.where).length !== 1 || !args.where.id) unsupported("timeSlot", "findUnique");
+      if (!args || Object.keys(args).length !== 1 || !args.where || Object.keys(args.where).length !== 1 || !args.where.id) unsupported("timeSlot", "findUnique");
       const result = await getDocumentClient().send(
         command("GetCommand", { TableName: timeSlotTableName(), Key: { id: args.where.id }, ConsistentRead: true }),
       );
@@ -22,7 +19,7 @@ export function createTimeSlotDelegate() {
     },
 
     async create(args: any) {
-      if (!args?.data || !args.data.tutorId || !args.data.date || !args.data.startTime || !args.data.endTime) unsupported("timeSlot", "create");
+      if (!args?.data || Object.keys(args).length !== 1 || Object.keys(args.data).sort().join(",") !== "date,endTime,startTime,tutorId" || !args.data.tutorId || !args.data.date || !args.data.startTime || !args.data.endTime) unsupported("timeSlot", "create");
       const item = {
         id: cuidShapedId(),
         tutorId: args.data.tutorId,
@@ -37,7 +34,7 @@ export function createTimeSlotDelegate() {
     },
 
     async update(args: any) {
-      if (!args?.where?.id || !args.data || Object.keys(args.data).length !== 1 || typeof args.data.isBooked !== "boolean") unsupported("timeSlot", "update");
+      if (!args || Object.keys(args).sort().join(",") !== "data,where" || !args.where?.id || !args.data || Object.keys(args.data).length !== 1 || typeof args.data.isBooked !== "boolean") unsupported("timeSlot", "update");
       const current = await getDocumentClient().send(
         command("GetCommand", { TableName: timeSlotTableName(), Key: { id: args.where.id }, ConsistentRead: true }),
       );
@@ -51,7 +48,7 @@ export function createTimeSlotDelegate() {
 
     async findMany(args: any) {
       const where = args?.where;
-      if (!where || !where.tutorId || !where.date?.gte || JSON.stringify(args.orderBy) !== JSON.stringify({ date: "asc" })) unsupported("timeSlot", "findMany");
+      if (!args || Object.keys(args).sort().join(",") !== "orderBy,select,where" || !where || !where.tutorId || !where.date?.gte || JSON.stringify(args.orderBy) !== JSON.stringify({ date: "asc" })) unsupported("timeSlot", "findMany");
       const now = fromStoredDate(toStoredDate(where.date.gte));
       const result = await getDocumentClient().send(
         command("QueryCommand", {
@@ -62,7 +59,7 @@ export function createTimeSlotDelegate() {
           ExpressionAttributeValues: { ":tutorId": where.tutorId, ":date": toStoredDate(now) },
         }),
       );
-      let items = (result.Items ?? []).map(scalarDates).filter((item: any) => {
+      const items = (result.Items ?? []).map(scalarDates).filter((item: any) => {
         if (where.isBooked === undefined) return true;
         return item.isBooked === where.isBooked;
       });

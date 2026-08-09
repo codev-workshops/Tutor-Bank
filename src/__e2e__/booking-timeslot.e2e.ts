@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { randomUUID } from "node:crypto";
 import { GET as getBookingsHandler, POST as createBookingHandler } from "@/app/api/bookings/route";
 import { PATCH as updateBookingHandler } from "@/app/api/bookings/[id]/route";
@@ -6,7 +7,6 @@ import { GET as getTutorHandler } from "@/app/api/tutors/[id]/route";
 import { initializeDatabase, prisma } from "@/lib/prisma";
 
 declare global {
-  // eslint-disable-next-line no-var
   var __e2eSession: any;
 }
 

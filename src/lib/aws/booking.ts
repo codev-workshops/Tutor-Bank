@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { getDocumentClient, loadAwsModule } from "./client";
 import { bookingTableName } from "./resources";
 import { cuidShapedId, prismaNotFound, prismaUnique, project, scalarDates, strictlyAfter, toStoredDate, unsupported } from "./common";
@@ -44,7 +45,7 @@ async function queryByIndex(indexName: string, keyName: string, keyValue: string
 export function createBookingDelegate(real: any, timeSlot: any) {
   return {
     async create(args: any) {
-      if (!args?.data || Object.keys(args.data).sort().join(",") !== "slotId,studentId,tutorId") unsupported("booking", "create");
+      if (!args?.data || Object.keys(args).length !== 1 || Object.keys(args.data).sort().join(",") !== "slotId,studentId,tutorId") unsupported("booking", "create");
       const duplicate = await queryByIndex("slotId-index", "slotId", args.data.slotId);
       if (duplicate.length) throw prismaUnique("Booking", ["slotId"]);
       const now = new Date().toISOString();
@@ -62,7 +63,7 @@ export function createBookingDelegate(real: any, timeSlot: any) {
     },
 
     async update(args: any) {
-      if (!args?.where?.id || !args.data || Object.keys(args.data).length !== 1 || !["CONFIRMED", "REJECTED", "CANCELLED"].includes(args.data.status)) unsupported("booking", "update");
+      if (!args || Object.keys(args).sort().join(",") !== "data,where" || !args.where?.id || !args.data || Object.keys(args.data).length !== 1 || !["CONFIRMED", "REJECTED", "CANCELLED"].includes(args.data.status)) unsupported("booking", "update");
       const current = await getById(args.where.id);
       if (!current) throw prismaNotFound("Booking");
       const updatedAt = strictlyAfter(toStoredDate(current.updatedAt));
@@ -76,7 +77,7 @@ export function createBookingDelegate(real: any, timeSlot: any) {
     },
 
     async findMany(args: any) {
-      if (!args?.where || !args.include || JSON.stringify(args.include) !== JSON.stringify(bookingInclude) || JSON.stringify(args.orderBy) !== JSON.stringify({ createdAt: "desc" })) unsupported("booking", "findMany");
+      if (!args || Object.keys(args).sort().join(",") !== "include,orderBy,where" || !args.where || !args.include || JSON.stringify(args.include) !== JSON.stringify(bookingInclude) || JSON.stringify(args.orderBy) !== JSON.stringify({ createdAt: "desc" })) unsupported("booking", "findMany");
       const key = args.where.tutorId ? ["tutorId-createdAt-index", "tutorId", args.where.tutorId] : args.where.studentId ? ["studentId-createdAt-index", "studentId", args.where.studentId] : undefined;
       if (!key) unsupported("booking", "findMany");
       const rows = await queryByIndex(key[0], key[1], key[2]);

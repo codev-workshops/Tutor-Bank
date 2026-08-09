@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Only Booking and TimeSlot are on DynamoDB. Every other model and helper is
  * delegated to the real Prisma client. Emulated-vs-native differences include

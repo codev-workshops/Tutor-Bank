@@ -1,5 +1,6 @@
 import { createRequire } from "node:module";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 type DynamoClient = { send(command: unknown): Promise<any> };
 type DocumentClient = { send(command: unknown): Promise<any> };
 
