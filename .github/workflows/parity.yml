@@ -33,8 +33,7 @@ jobs:
         run: |
           docker run -d --name tutor-bank-moto -p 127.0.0.1:5001:5000 motoserver/moto
           for attempt in $(seq 1 60); do
-            if AWS_ACCESS_KEY_ID=dummy AWS_SECRET_ACCESS_KEY=dummy AWS_DEFAULT_REGION=us-east-1 \
-              aws dynamodb list-tables --endpoint-url http://127.0.0.1:5001 >/dev/null 2>&1; then
+            if curl -fsS http://127.0.0.1:5001/ >/dev/null 2>&1; then
               exit 0
             fi
             sleep 1
