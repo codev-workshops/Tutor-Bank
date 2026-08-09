@@ -51,3 +51,41 @@ jobs:
           name: coverage-report
           path: coverage/
           retention-days: 30
+
+  parity:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: tutor_bank_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      moto:
+        image: motoserver/moto
+        ports:
+          - 5001:5001
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx prisma generate
+      - run: DATABASE_URL=postgresql://test:test@localhost:5432/tutor_bank_test npx prisma db push
+      - run: npm run test:parity
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/tutor_bank_test
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_REGION: us-east-1
+          AWS_ENDPOINT_URL: http://127.0.0.1:5001
+          DYNAMODB_TABLE_PREFIX: tutor-bank-ci-

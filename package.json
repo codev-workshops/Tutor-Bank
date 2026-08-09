@@ -10,10 +10,17 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:ci": "jest --ci --coverage --maxWorkers=2"
+    "test:ci": "jest --ci --coverage --maxWorkers=2",
+    "emu-up": "bash scripts/emulator.sh up",
+    "emu-down": "bash scripts/emulator.sh down",
+    "test:e2e:local": "npx prisma generate && DATABASE_URL=postgresql://test:test@127.0.0.1:5432/tutor_bank_test npx prisma db push --accept-data-loss && RUN_E2E=1 DB_MODE=postgres DATABASE_URL=postgresql://test:test@127.0.0.1:5432/tutor_bank_test npx jest -c jest.e2e.config.js",
+    "test:e2e:aws": "npx prisma generate && RUN_E2E=1 DB_MODE=aws DATABASE_URL=postgresql://test:test@127.0.0.1:5432/tutor_bank_test AWS_REGION=us-east-1 AWS_ENDPOINT_URL=http://127.0.0.1:5001 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test DYNAMODB_TABLE_PREFIX=tutor-bank-e2e- npx jest -c jest.e2e.config.js",
+    "test:parity": "npm test && npm run test:e2e:local && npm run test:e2e:aws"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
+    "@aws-sdk/client-dynamodb": "3.1105.0",
+    "@aws-sdk/lib-dynamodb": "3.1105.0",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "bcryptjs": "^3.0.3",
