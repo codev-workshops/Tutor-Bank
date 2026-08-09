@@ -30,8 +30,9 @@ cuid implementation), `createdAt: new Date()` and `read: false` defaults.
 Reads query the GSI in descending order and retry briefly for read-after-write
 visibility, since GSIs are eventually consistent. Results are normalized to real
 `Date` instances and sorted in memory by descending `createdAt`, then descending
-`id` as a deterministic tie-break. Postgres does not define tie ordering, so parity
-tests use distinct timestamps and do not depend on tie order.
+`id` for descending requests (and ascending `id` for ascending requests) as a
+deterministic tie-break. Postgres does not define tie ordering, so parity tests
+use distinct timestamps and do not depend on tie order.
 
 ## Emulated versus native behavior
 
@@ -69,9 +70,11 @@ asserted as the actual behavior in parity tests.
    adapter factory needed by `authOptions`; route authentication remains backed
    by the permitted `getServerSession` stub.
 2. The first local run then hit Prisma's generated `prisma-client` WASM ESM
-   loader under Jest (`Unexpected token 'export'`). The generator was switched
-   to Prisma's `prisma-client-js` provider (same generated output and Prisma
-   version), which uses the compatible runtime for the real e2e client.
+   loader under Jest (`Unexpected token 'export'`). The production schema and
+   tracked generated stub were left unchanged. The e2e scripts now generate a
+   harness-local `prisma-client-js` client into the ignored `.e2e-generated`
+   directory, and the e2e Jest config maps only the generated-client import to
+   that harness output.
 3. The first AWS parity run returned `read: false` after PATCH because the
    DynamoDB expression placeholder map (`:read`) was spread directly into the
    result object. The adapter now overlays the actual `read` and `message`
@@ -80,7 +83,7 @@ asserted as the actual behavior in parity tests.
 ## Deliberate-break evidence
 
 The adapter was deliberately changed to return `read: false` from `update`.
-`npm run test:e2e:aws` exited non-zero in
+`npm run test:parity` exited non-zero in
 `Notification parity › marks a notification read`:
 
 ```diff
@@ -93,4 +96,5 @@ The adapter was deliberately changed to return `read: false` from `update`.
   }
 ```
 
-The change was reverted and the AWS parity suite was rerun successfully.
+The change was reverted and the full `npm run test:parity` suite was rerun
+successfully.

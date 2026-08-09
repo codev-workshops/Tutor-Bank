@@ -1,2 +1,1 @@
-export { PrismaClient } from "./index.js";
-export * from "./index.js";
+export class PrismaClient { constructor(_opts?: unknown) {} }

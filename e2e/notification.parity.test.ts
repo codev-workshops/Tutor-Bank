@@ -35,7 +35,15 @@ describe("Notification parity", () => {
     expect(response.status).toBe(201);
     const notifications = await getNotifications(new Request(`http://localhost/api/notifications?userId=${tutor.id}`));
     expect(notifications.status).toBe(200);
-    expect((await notifications.json())[0]).toMatchObject({ userId: tutor.id, read: false });
+    const tutorNotifications = await notifications.json();
+    expect(tutorNotifications).toHaveLength(1);
+    expect(tutorNotifications[0]).toMatchObject({
+      userId: tutor.id,
+      message: `New booking request for slot on ${new Date("2030-01-01T10:00:00Z").toLocaleDateString()}`,
+      read: false,
+    });
+    const studentNotifications = await getNotifications(new Request(`http://localhost/api/notifications?userId=${student.id}`));
+    expect(await studentNotifications.json()).toEqual([]);
   });
 
   it("orders notifications descending and filters by user", async () => {
@@ -47,6 +55,8 @@ describe("Notification parity", () => {
     const response = await getNotifications(new Request(`http://localhost/api/notifications?userId=${target.id}`));
     expect(response.status).toBe(200);
     expect((await response.json()).map((item: { message: string }) => item.message)).toEqual(["new", "old"]);
+    const otherResponse = await getNotifications(new Request(`http://localhost/api/notifications?userId=${other.id}`));
+    expect((await otherResponse.json()).map((item: { message: string }) => item.message)).toEqual(["other"]);
   });
 
   it("marks a notification read", async () => {

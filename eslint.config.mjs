@@ -14,6 +14,7 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "coverage/**",
     "src/generated/prisma/**",
+    ".e2e-generated/**",
   ]),
   {
     files: ["**/__tests__/**/*", "**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}"],

@@ -63,7 +63,8 @@ export class NotificationAdapter {
     }
     return items.map(itemToNotification).sort((a, b) => {
       const dateOrder = b.createdAt.getTime() - a.createdAt.getTime();
-      return (direction ? dateOrder : -dateOrder) || b.id.localeCompare(a.id);
+      const tieOrder = a.id.localeCompare(b.id);
+      return (direction ? dateOrder : -dateOrder) || (direction ? tieOrder : -tieOrder);
     });
   }
 

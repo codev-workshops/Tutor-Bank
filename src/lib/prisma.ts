@@ -14,6 +14,7 @@ function createPrismaClient() {
 }
 
 const realPrisma = globalForPrisma.prisma ?? createPrismaClient();
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = realPrisma;
 const hybridPrisma = process.env.DB_MODE === "aws" ? new Proxy(realPrisma as object, {
   get(target, property, receiver) {
     if (property === "notification") {
@@ -50,5 +51,3 @@ export async function initializeDatabase(): Promise<void> {
   }
   return;
 }
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
