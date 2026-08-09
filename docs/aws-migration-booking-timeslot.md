@@ -121,8 +121,8 @@ the current booking POST returns HTTP 500 with `{"error":"Internal server error"
 because `requireAuth()` throws and the route's generic catch handles it. This
 migration does not add a 401/403 path.
 
-The e2e project uses `next/jest`'s default transform with a Node test
-environment and a separate setup file. The setup file mocks only
+The e2e project runs under `next/jest` with a Node test environment and a
+separate setup file. The setup file mocks only
 `next-auth`'s `getServerSession`; Prisma remains real in both modes. The
 default transform cannot load the ESM-only `@auth/prisma-adapter` package
 (`Unexpected token 'export'` while importing `src/lib/auth.ts`), and then
