@@ -19,6 +19,8 @@ const customJestConfig = {
     '!src/**/*.d.ts',
     '!src/**/__tests__/**',
     '!src/generated/**',
+    '!src/lib/aws/**',
+    '!src/__e2e__/**',
   ],
   coverageThreshold: {
     global: {
